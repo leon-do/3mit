@@ -1,6 +1,7 @@
 import * as dotenv from "dotenv";
 dotenv.config();
 import { ethers } from "ethers";
+import wss from "./wss";
 
 // Event to emit
 interface Event {
@@ -27,12 +28,17 @@ provider.on("block", async (_blockNumber: number) => {
   // log events
   for (const event of events) {
     console.log(event);
+    // send event to websocket server
+    wss.clients.forEach((client) => {
+      client.send(JSON.stringify(event));
+    });
   }
 });
 
 function parseReceipts(_receipts: ethers.providers.TransactionReceipt[]) {
   let events: Event[] = [];
   for (const receipt of _receipts) {
+    if (!receipt.logs) continue;
     for (const log of receipt.logs) {
       const contractAddress = log.address;
       const transactionHash = receipt.transactionHash;

@@ -1,0 +1,12 @@
+<code id="event"></code>
+
+<script>
+  let events = "";
+  // open websocket
+  const ws = new WebSocket("ws://localhost:8080");
+  // listen to messages
+  ws.onmessage = (event) => {
+    events = event.data + events;
+    document.getElementById("event").innerHTML = events;
+  };
+</script>
