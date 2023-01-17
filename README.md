@@ -14,7 +14,9 @@ Update `.env` file
 RPC_URL=wss://goerli.infura.io/ws/v3/<API_KEY>
 ```
 
-npm run dev
+`npm run dev`
+
+Emmited event:
 
 ```json
 {
