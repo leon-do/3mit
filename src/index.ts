@@ -15,7 +15,7 @@ interface Event {
 const provider = new ethers.providers.WebSocketProvider(process.env.RPC_URL as string);
 
 // listen to new blocks
-provider.on("block", async (_blockNumber) => {
+provider.on("block", async (_blockNumber: number) => {
   // get block info
   const block: ethers.providers.Block = await provider.getBlock(_blockNumber);
   // parse transactions from block info
