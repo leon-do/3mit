@@ -2,15 +2,8 @@ import * as dotenv from "dotenv";
 dotenv.config();
 import { ethers } from "ethers";
 import wss from "./wss";
-
-// Event to emit
-interface Event {
-  contractAddress: string;
-  transactionHash: string;
-  eventHash: string;
-  args: string[];
-  data: string;
-}
+import parseReceipts from "./parseReceipts";
+import { Event } from "./types";
 
 // connect to ethereum websocket provider
 const provider = new ethers.providers.WebSocketProvider(process.env.RPC_URL as string);
@@ -34,19 +27,3 @@ provider.on("block", async (_blockNumber: number) => {
     });
   }
 });
-
-function parseReceipts(_receipts: ethers.providers.TransactionReceipt[]) {
-  let events: Event[] = [];
-  for (const receipt of _receipts) {
-    if (!receipt.logs) continue;
-    for (const log of receipt.logs) {
-      const contractAddress = log.address;
-      const transactionHash = receipt.transactionHash;
-      const eventHash = log.topics[0];
-      const args = log.topics.slice(1);
-      const data = log.data;
-      events.push({ contractAddress, transactionHash, eventHash, args, data });
-    }
-  }
-  return events;
-}
