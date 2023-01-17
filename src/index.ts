@@ -2,8 +2,8 @@ import * as dotenv from "dotenv";
 dotenv.config();
 import { ethers } from "ethers";
 
-// Events to emit
-interface Events {
+// Event to emit
+interface Event {
   contractAddress: string;
   transactionHash: string;
   eventHash: string;
@@ -19,14 +19,14 @@ provider.on("block", async (_blockNumber) => {
   const block: ethers.providers.Block = await provider.getBlock(_blockNumber);
   const transactions = block.transactions;
   const receipts: ethers.providers.TransactionReceipt[] = await Promise.all(transactions.map((transactions) => provider.getTransactionReceipt(transactions)));
-  const events: Events[] = parseReceipts(receipts);
+  const events: Event[] = parseReceipts(receipts);
   for (const event of events) {
     console.log(event);
   }
 });
 
 function parseReceipts(_receipts: ethers.providers.TransactionReceipt[]) {
-  let events: Events[] = [];
+  let events: Event[] = [];
   for (const receipt of _receipts) {
     for (const log of receipt.logs) {
       const contractAddress = log.address;
