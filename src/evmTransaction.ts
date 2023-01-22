@@ -32,9 +32,9 @@ export default async function evmTransaction(_provider: ethers.providers.JsonRpc
         })
         .then((webhookBody) => {
           // console.log(webhookBody);
-          axios.post(process.env.WEBHOOK_URL, JSON.stringify(webhookBody), {
+          axios.post(process.env.WEBHOOK_URL as string, JSON.stringify(webhookBody), {
             headers: {
-              "admin-key": process.env.ADMIN_KEY,
+              "admin-key": process.env.ADMIN_KEY as string,
             },
           });
         });
