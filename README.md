@@ -84,5 +84,3 @@ Emmited event:
    "byzantium":true
 }
 ```
-
-https://user-images.githubusercontent.com/19412160/212821216-8eb6603c-7318-493e-b437-b67aeb3e326f.mov
