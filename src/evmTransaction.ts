@@ -1,7 +1,13 @@
 import { ethers } from "ethers";
 import axios from "axios";
 
-// main function to get blocks and POST transactions
+/*
+ * This function will recursively call itself until it finds a new block. It will then loop through the transactions in the block and emit them to the webhook.
+ * @param _provider ethers.providers.JsonRpcProvider
+ * @param _lastBlock number
+ * @returns Promise<void>
+ * @example evmTransaction(new ethers.providers.JsonRpcProvider("https://rpc.ankr.com/eth_goerli"), 0);
+ * */
 export default async function evmTransaction(_provider: ethers.providers.JsonRpcProvider, _lastBlock: number): Promise<void> {
   try {
     // delay
@@ -26,9 +32,9 @@ export default async function evmTransaction(_provider: ethers.providers.JsonRpc
         })
         .then((webhookBody) => {
           // console.log(webhookBody);
-          axios.post("http://localhost:3000/api/evm/transaction", JSON.stringify(webhookBody), {
+          axios.post(process.env.WEBHOOK_URL, JSON.stringify(webhookBody), {
             headers: {
-              "admin-key": "321",
+              "admin-key": process.env.ADMIN_KEY,
             },
           });
         });
