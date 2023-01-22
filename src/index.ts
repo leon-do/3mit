@@ -1,29 +1,38 @@
-import * as dotenv from "dotenv";
-dotenv.config();
 import { ethers } from "ethers";
-import wss from "./wss";
-import parseReceipts from "./parseReceipts";
-import { Event } from "./types";
+import axios from "axios";
 
-// connect to ethereum websocket provider
-const provider = new ethers.providers.WebSocketProvider(process.env.RPC_URL as string);
+main(new ethers.providers.JsonRpcProvider("https://rpc.ankr.com/eth_goerli"), 0);
 
-// listen to new blocks
-provider.on("block", async (_blockNumber: number) => {
-  // get block info
-  const block: ethers.providers.Block = await provider.getBlock(_blockNumber);
-  // parse transactions from block info
-  const transactions = block.transactions;
-  // get receipts from all transactions
-  const receipts: ethers.providers.TransactionReceipt[] = await Promise.all(transactions.map((transactions) => provider.getTransactionReceipt(transactions)));
-  // parse receipts
-  const events: Event[] = parseReceipts(receipts);
-  // log events
-  for (const event of events) {
-    console.log(event);
-    // send event to websocket server
-    wss.clients.forEach((client) => {
-      client.send(JSON.stringify(event));
-    });
+// main function to get blocks and POST transactions
+async function main(_provider: ethers.providers.JsonRpcProvider, _lastBlock: number): Promise<void> {
+  try {
+    // delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    // get latest block number
+    const blockNumber: number = await _provider.getBlockNumber();
+    // check if there are new blocks
+    if (blockNumber === _lastBlock) return main(_provider, _lastBlock);
+    // get block info
+    const block: ethers.providers.Block = await _provider.getBlock(blockNumber);
+    // parse transactions from block info
+    const transactionHashes = block.transactions;
+    // loop through transaction hashes
+    for (const transactionHash of transactionHashes) {
+      // combine transaction and receipt info
+      _provider
+        .getTransaction(transactionHash)
+        .then(async (transactionResponse) => {
+          const transactionReceipt: ethers.providers.TransactionReceipt = await _provider.getTransactionReceipt(transactionResponse.hash);
+          const webhookBody: ethers.providers.TransactionResponse & ethers.providers.TransactionReceipt = { ...transactionResponse, ...transactionReceipt };
+          return webhookBody;
+        })
+        .then((webhookBody) => {
+          // console.log(webhookBody);
+          axios.post("http://localhost:3000/api/evm/transaction", webhookBody);
+        });
+    }
+    return main(_provider, blockNumber);
+  } catch {
+    return main(_provider, _lastBlock);
   }
-});
+}
