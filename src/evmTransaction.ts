@@ -25,11 +25,11 @@ export default async function evmTransaction(_provider: ethers.providers.JsonRpc
       // combine transaction and receipt info
       _provider.getTransaction(transactionHash).then(async (transactionResponse) => {
         console.log(JSON.stringify(transactionResponse, null, 4));
-        // axios.post("http://localhost:3000/api/evm/transaction", JSON.stringify(transactionResponse), {
-        //   headers: {
-        //     "admin-key": process.env.ADMIN_KEY as string,
-        //   },
-        // });
+        axios.post("http://localhost:3000/api/evm/transaction", transactionResponse, {
+          headers: {
+            "admin-key": process.env.ADMIN_KEY as string,
+          },
+        });
       });
     }
     return evmTransaction(_provider, blockNumber);
