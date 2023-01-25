@@ -29,7 +29,7 @@ export default async function evmTransaction(_provider: ethers.providers.JsonRpc
           console.log(JSON.stringify(transactionResponse, null, 4));
           axios.post("http://localhost:3000/api/evm/transaction", transactionResponse, {
             headers: {
-              "admin-key": process.env.ADMIN_KEY as string,
+              "x-admin-key": process.env.X_ADMIN_KEY as string,
             },
           });
         })

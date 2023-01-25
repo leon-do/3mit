@@ -40,7 +40,7 @@ export default async function evmEvent(_provider: ethers.providers.JsonRpcProvid
             axios
               .post("https://web3hook.leondo.repl.co/api/evm/event", eventResponse, {
                 headers: {
-                  "admin-key": process.env.ADMIN_KEY as string,
+                  "x-admin-key": process.env.X_ADMIN_KEY as string,
                 },
               })
               .catch((error) => {
