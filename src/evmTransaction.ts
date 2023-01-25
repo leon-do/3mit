@@ -23,21 +23,14 @@ export default async function evmTransaction(_provider: ethers.providers.JsonRpc
     // loop through transaction hashes
     for (const transactionHash of transactionHashes) {
       // combine transaction and receipt info
-      _provider
-        .getTransaction(transactionHash)
-        .then(async (transactionResponse) => {
-          const transactionReceipt: ethers.providers.TransactionReceipt = await _provider.getTransactionReceipt(transactionResponse.hash);
-          const transaction: ethers.providers.TransactionResponse & ethers.providers.TransactionReceipt = { ...transactionResponse, ...transactionReceipt };
-          return transaction;
-        })
-        .then((transaction) => {
-          console.log(JSON.stringify(transaction, null, 2));
-          axios.post(process.env.WEBHOOK_URL as string, JSON.stringify(transaction), {
-            headers: {
-              "admin-key": process.env.ADMIN_KEY as string,
-            },
-          });
-        });
+      _provider.getTransaction(transactionHash).then(async (transactionResponse) => {
+        console.log(JSON.stringify(transactionResponse, null, 4));
+        // axios.post("http://localhost:3000/api/evm/transaction", JSON.stringify(transactionResponse), {
+        //   headers: {
+        //     "admin-key": process.env.ADMIN_KEY as string,
+        //   },
+        // });
+      });
     }
     return evmTransaction(_provider, blockNumber);
   } catch {
