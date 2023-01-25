@@ -28,25 +28,29 @@ export default async function evmEvent(_provider: ethers.providers.JsonRpcProvid
     // loop through transaction hashes
     for (const transactionHash of transactionHashes) {
       // combine transaction and receipt info
-      _provider.getTransactionReceipt(transactionHash).then(async (transactionReceipt) => {
-        if (!transactionReceipt.logs) return;
-        for (const log of transactionReceipt.logs) {
-          const eventResponse: EventResponse = {
-            chainId: _chainId,
-            log,
-          };
-          console.log(JSON.stringify(eventResponse, null, 4));
-          axios
-            .post("https://web3hook.leondo.repl.co/api/evm/event", eventResponse, {
-              headers: {
-                "admin-key": process.env.ADMIN_KEY as string,
-              },
-            })
-            .catch((error) => {
-              console.error(error);
-            });
-        }
-      });
+      _provider
+        .getTransactionReceipt(transactionHash)
+        .then(async (transactionReceipt) => {
+          for (const log of transactionReceipt.logs) {
+            const eventResponse: EventResponse = {
+              chainId: _chainId,
+              log,
+            };
+            console.log(JSON.stringify(eventResponse, null, 4));
+            axios
+              .post("https://web3hook.leondo.repl.co/api/evm/event", eventResponse, {
+                headers: {
+                  "admin-key": process.env.ADMIN_KEY as string,
+                },
+              })
+              .catch((error) => {
+                console.error(error);
+              });
+          }
+        })
+        .catch(() => {
+          return evmEvent(_provider, blockNumber, _chainId);
+        });
     }
     return evmEvent(_provider, blockNumber, _chainId);
   } catch {
