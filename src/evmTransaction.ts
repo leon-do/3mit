@@ -11,11 +11,11 @@ import axios from "axios";
 export default async function evmTransaction(_provider: ethers.providers.JsonRpcProvider, _lastBlock: number): Promise<void> {
   try {
     // delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     // get latest block number
     const blockNumber: number = await _provider.getBlockNumber();
     // check if there are new blocks
-    if (blockNumber === _lastBlock) return evmTransaction(_provider, _lastBlock);
+    if (blockNumber <= _lastBlock) return evmTransaction(_provider, _lastBlock);
     // get block info
     const block: ethers.providers.Block = await _provider.getBlock(blockNumber);
     // parse transactions from block info
@@ -33,13 +33,9 @@ export default async function evmTransaction(_provider: ethers.providers.JsonRpc
                 "x-admin-key": process.env.X_ADMIN_KEY as string,
               },
             })
-            .catch(() => {
-              return evmTransaction(_provider, blockNumber);
-            });
+            .catch(() => {});
         })
-        .catch(() => {
-          return evmTransaction(_provider, blockNumber);
-        });
+        .catch(() => {});
     }
     return evmTransaction(_provider, blockNumber);
   } catch {

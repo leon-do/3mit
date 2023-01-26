@@ -20,7 +20,7 @@ export default async function evmEvent(_provider: ethers.providers.JsonRpcProvid
     // get latest block number
     const blockNumber: number = await _provider.getBlockNumber();
     // check if there are new blocks
-    if (blockNumber === _lastBlock) return evmEvent(_provider, _lastBlock, _chainId);
+    if (blockNumber <= _lastBlock) return evmEvent(_provider, _lastBlock, _chainId);
     // get block info
     const block: ethers.providers.Block = await _provider.getBlock(blockNumber);
     // parse transactions from block info
@@ -43,14 +43,10 @@ export default async function evmEvent(_provider: ethers.providers.JsonRpcProvid
                   "x-admin-key": process.env.X_ADMIN_KEY as string,
                 },
               })
-              .catch((error) => {
-                console.error(error);
-              });
+              .catch(() => {});
           }
         })
-        .catch(() => {
-          return evmEvent(_provider, blockNumber, _chainId);
-        });
+        .catch(() => {});
     }
     return evmEvent(_provider, blockNumber, _chainId);
   } catch {
