@@ -13,14 +13,14 @@ type EventResponse = {
  * @returns Promise<void>
  * @example evmTransaction(new ethers.providers.JsonRpcProvider("https://rpc.ankr.com/eth_goerli"), 0);
  * */
-export default async function evmEvent(_provider: ethers.providers.JsonRpcProvider, _lastBlock: number, _chainId: number): Promise<void> {
+export default async function evmEvent(_provider: ethers.providers.JsonRpcProvider, _lastBlock: number, _chainId: number, _timeOut: number): Promise<void> {
   try {
     // delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, _timeOut));
     // get latest block number
     const blockNumber: number = await _provider.getBlockNumber();
     // check if there are new blocks
-    if (blockNumber <= _lastBlock) return evmEvent(_provider, _lastBlock, _chainId);
+    if (blockNumber <= _lastBlock) return evmEvent(_provider, _lastBlock, _chainId, _timeOut);
     // get block info
     const block: ethers.providers.Block = await _provider.getBlock(blockNumber);
     // parse transactions from block info
@@ -48,8 +48,8 @@ export default async function evmEvent(_provider: ethers.providers.JsonRpcProvid
         })
         .catch(() => {});
     }
-    return evmEvent(_provider, blockNumber, _chainId);
+    return evmEvent(_provider, blockNumber, _chainId, _timeOut);
   } catch {
-    return evmEvent(_provider, _lastBlock, _chainId);
+    return evmEvent(_provider, _lastBlock, _chainId, _timeOut);
   }
 }

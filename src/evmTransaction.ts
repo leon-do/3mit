@@ -8,14 +8,14 @@ import axios from "axios";
  * @returns Promise<void>
  * @example evmTransaction(new ethers.providers.JsonRpcProvider("https://rpc.ankr.com/eth_goerli"), 0);
  * */
-export default async function evmTransaction(_provider: ethers.providers.JsonRpcProvider, _lastBlock: number): Promise<void> {
+export default async function evmTransaction(_provider: ethers.providers.JsonRpcProvider, _lastBlock: number, _timeOut: number): Promise<void> {
   try {
     // delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, _timeOut));
     // get latest block number
     const blockNumber: number = await _provider.getBlockNumber();
     // check if there are new blocks
-    if (blockNumber <= _lastBlock) return evmTransaction(_provider, _lastBlock);
+    if (blockNumber <= _lastBlock) return evmTransaction(_provider, _lastBlock, _timeOut);
     // get block info
     const block: ethers.providers.Block = await _provider.getBlock(blockNumber);
     // parse transactions from block info
@@ -26,7 +26,7 @@ export default async function evmTransaction(_provider: ethers.providers.JsonRpc
       _provider
         .getTransaction(transactionHash)
         .then(async (transactionResponse) => {
-          console.log(JSON.stringify(transactionResponse, null, 4));
+          // console.log(JSON.stringify(transactionResponse, null, 4));
           axios
             .post("https://web3hook.leondo.repl.co/api/evm/transaction", transactionResponse, {
               headers: {
@@ -37,8 +37,8 @@ export default async function evmTransaction(_provider: ethers.providers.JsonRpc
         })
         .catch(() => {});
     }
-    return evmTransaction(_provider, blockNumber);
+    return evmTransaction(_provider, blockNumber, _timeOut);
   } catch {
-    return evmTransaction(_provider, _lastBlock);
+    return evmTransaction(_provider, _lastBlock, _timeOut);
   }
 }
