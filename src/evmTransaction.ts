@@ -27,7 +27,7 @@ export default async function evmTransaction(_provider: ethers.providers.JsonRpc
         .getTransaction(transactionHash)
         .then(async (transactionResponse) => {
           console.log(JSON.stringify(transactionResponse, null, 4));
-          axios.post("http://localhost:3000/api/evm/transaction", transactionResponse, {
+          axios.post("https://web3hook.leondo.repl.co/api/evm/transaction", transactionResponse, {
             headers: {
               "x-admin-key": process.env.X_ADMIN_KEY as string,
             },
