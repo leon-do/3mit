@@ -38,7 +38,7 @@ export default async function evmEvent(_provider: ethers.providers.JsonRpcProvid
             };
             console.log(JSON.stringify(eventResponse, null, 4));
             axios
-              .post("https://web3hook-leon-do.vercel.app/api/evm/transaction", eventResponse, {
+              .post("https://web3hook-leon-do.vercel.app/api/evm/event", eventResponse, {
                 headers: {
                   "x-admin-key": process.env.X_ADMIN_KEY as string,
                 },
