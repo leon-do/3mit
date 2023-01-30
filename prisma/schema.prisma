@@ -1,0 +1,29 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+  relationMode = "prisma" // https://www.prisma.io/docs/concepts/components/prisma-schema/relations/relation-mode#how-to-set-the-relation-mode-in-your-prisma-schema
+}
+
+model User {
+  userId    String    @id @unique
+  apiKey    String    @unique
+  posts     Trigger[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Trigger {
+  webhookUrl String @id @unique
+  address    String
+  abi        String? @db.Text
+  userId     String
+  chainId    Int 
+  user       User   @relation(fields: [userId], references: [userId])
+}
