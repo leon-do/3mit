@@ -8,7 +8,7 @@ if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL not set in .env fil
 if (!process.env.RPC_URL) throw new Error("RPC_URL not set in .env file");
 if (!process.env.TIMEOUT) throw new Error("TIMEOUT not set in .env file");
 
-// start emitting transactions and events
+// create event and transaction instances
 const event = new Event(process.env.RPC_URL);
 const transaction = new Transaction(process.env.RPC_URL);
 
@@ -20,9 +20,9 @@ async function startTransaction(_lastBlockNumber: number): Promise<void> {
     const blockNumber = await event.getBlockNumber();
     if (blockNumber > _lastBlockNumber) {
       transaction.emit(blockNumber);
-      startTransaction(blockNumber);
+      return startTransaction(blockNumber);
     } else {
-      startTransaction(_lastBlockNumber);
+      return startTransaction(_lastBlockNumber);
     }
   } catch {
     return startTransaction(_lastBlockNumber);
@@ -37,9 +37,9 @@ async function startEvent(_lastBlockNumber: number): Promise<void> {
     const blockNumber = await event.getBlockNumber();
     if (blockNumber > _lastBlockNumber) {
       event.emit(blockNumber);
-      startEvent(blockNumber);
+      return startEvent(blockNumber);
     } else {
-      startEvent(_lastBlockNumber);
+      return startEvent(_lastBlockNumber);
     }
   } catch {
     return startEvent(_lastBlockNumber);
