@@ -15,7 +15,7 @@ export default async function getEvents(_provider: ethers.providers.JsonRpcProvi
     // get latest block number
     const blockNumber: number = await _provider.getBlockNumber();
     // check if there are new blocks
-    if (blockNumber <= _lastBlock) return getEvents(_provider, _lastBlock, _chainId, _timeOut);
+    if (blockNumber <= _lastBlock) return getEvents(_provider, _lastBlock, _timeOut, _chainId);
     // get block info
     const block: ethers.providers.Block = await _provider.getBlock(blockNumber);
     // parse transactions from block info
@@ -33,8 +33,8 @@ export default async function getEvents(_provider: ethers.providers.JsonRpcProvi
         })
         .catch(() => {});
     }
-    return getEvents(_provider, blockNumber, _chainId, _timeOut);
+    return getEvents(_provider, blockNumber, _timeOut, _chainId);
   } catch {
-    return getEvents(_provider, _lastBlock, _chainId, _timeOut);
+    return getEvents(_provider, _lastBlock, _timeOut, _chainId);
   }
 }
