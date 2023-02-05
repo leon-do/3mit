@@ -2,6 +2,7 @@ import axios from "axios";
 import { ethers } from "ethers";
 import { PrismaClient } from "@prisma/client";
 import { Trigger } from "@prisma/client";
+import { User } from "@prisma/client";
 
 type HookResponse = {
   transactionHash: string;
@@ -33,6 +34,7 @@ export default class Transaction {
             triggers.forEach((trigger) => {
               const hookResponse: HookResponse = this.getHookResponse(transactionResponse);
               this.emitHookResponse(trigger, hookResponse);
+              this.incrementCredits(trigger);
             });
           });
         });
@@ -68,6 +70,24 @@ export default class Transaction {
             address: _transaction.to ? _transaction.to.toLowerCase() : "",
           },
         ],
+        user: {
+          credits: {
+            lte: 1000,
+          },
+        },
+      },
+    });
+  }
+
+  async incrementCredits(_trigger: Trigger): Promise<User> {
+    return await this.prisma.user.update({
+      where: {
+        id: _trigger.userId,
+      },
+      data: {
+        credits: {
+          increment: 1,
+        },
       },
     });
   }
