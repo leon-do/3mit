@@ -31,9 +31,11 @@ export default class Event {
           logs.forEach((log) => {
             this.queryDatabase(log).then((triggers) => {
               triggers.forEach((trigger) => {
-                const hookResponse: HookResponse = this.getHookResponse(trigger.abi || "[]", log);
-                this.emitHookResponse(trigger, hookResponse);
-                this.incrementCredits(trigger);
+                const hookResponse: HookResponse | null = this.getHookResponse(trigger, log);
+                if (hookResponse) {
+                  this.emitHookResponse(trigger, hookResponse);
+                  this.incrementCredits(trigger);
+                }
               });
             });
           });
@@ -61,16 +63,15 @@ export default class Event {
     return receipt.logs;
   }
 
-  getHookResponse(_abi: string, _log: ethers.providers.Log): HookResponse {
+  getHookResponse(_trigger: Trigger, _log: ethers.providers.Log): HookResponse | null {
+    if (!_trigger.abi || !_trigger.event) return null;
     const hookResponse: HookResponse = { transactionHash: _log.transactionHash };
-    const iface = new ethers.utils.Interface(_abi);
-    // fill event object with null values
-    for (const key in iface.events) {
-      const eventName = iface.events[key].name;
-      iface.events[key].inputs.forEach((input) => {
-        hookResponse[`${eventName}_${input.name}`] = null;
-      });
-    }
+    const iface = new ethers.utils.Interface(_trigger.abi);
+    // create empty object for each event
+    const eventName = iface.events[_trigger.event].name;
+    iface.events[_trigger.event].inputs.forEach((input) => {
+      hookResponse[`${eventName}_${input.name}`] = null;
+    });
     const eventSignature = iface.parseLog({ data: _log.data, topics: _log.topics });
     // fill event object with values from eventSignature
     for (const key in eventSignature.args) {
@@ -82,15 +83,25 @@ export default class Event {
   }
 
   async queryDatabase(_log: ethers.providers.Log): Promise<Trigger[]> {
+    // SELECT * FROM triggers WHERE chainId = this.chainId AND address = _log.address AND (user.credits <= 1000 OR user.paid = true)
     return await this.prisma.trigger.findMany({
       where: {
         chainId: this.chainId,
         address: _log.address.toLowerCase(),
-        user: {
-          credits: {
-            lte: 1000,
+        OR: [
+          {
+            user: {
+              credits: {
+                lte: 1000,
+              },
+            },
           },
-        },
+          {
+            user: {
+              paid: true,
+            },
+          },
+        ],
       },
     });
   }

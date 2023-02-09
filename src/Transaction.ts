@@ -58,23 +58,39 @@ export default class Transaction {
   }
 
   async queryDatabase(_transaction: ethers.providers.TransactionResponse): Promise<Trigger[]> {
+    // SELECT * FROM triggers WHERE chainId = _transaction.chainId AND abi IS NULL AND (address = _transaction.from OR address = _transaction.to) AND (user.credits <= 1000 OR user.paid = true)
     return await this.prisma.trigger.findMany({
       where: {
         chainId: _transaction.chainId,
         abi: null,
-        OR: [
+        AND: [
           {
-            address: _transaction.from.toLowerCase(),
+            AND: [
+              {
+                address: _transaction.from.toLowerCase(),
+              },
+              {
+                address: _transaction.to ? _transaction.to.toLowerCase() : "",
+              },
+            ],
           },
           {
-            address: _transaction.to ? _transaction.to.toLowerCase() : "",
+            OR: [
+              {
+                user: {
+                  credits: {
+                    lte: 1000,
+                  },
+                },
+              },
+              {
+                user: {
+                  paid: true,
+                },
+              },
+            ],
           },
         ],
-        user: {
-          credits: {
-            lte: 1000,
-          },
-        },
       },
     });
   }

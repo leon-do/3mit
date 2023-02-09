@@ -76,9 +76,11 @@ model Trigger {
   webhookUrl String  @id @unique
   address    String
   abi        String? @db.Text
+  event      String?
   userId     String
   chainId    Int
   user       User    @relation(fields: [userId], references: [id])
+  streamId   String? @unique // from Moralis
 
   @@index([userId])
 }
