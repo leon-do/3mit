@@ -3,6 +3,9 @@ import { ethers } from "ethers";
 import { PrismaClient } from "@prisma/client";
 import { Trigger } from "@prisma/client";
 import { User } from "@prisma/client";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, { apiVersion: "2022-11-15" });
 
 type HookResponse = {
   transactionHash: string;
@@ -30,11 +33,16 @@ export default class Event {
         this.getTransactionLogs(transactionHash).then((logs) => {
           logs.forEach((log) => {
             this.queryDatabase(log).then((triggers) => {
-              triggers.forEach((trigger) => {
-                const hookResponse: HookResponse | null = this.getHookResponse(trigger, log);
-                if (hookResponse) {
-                  this.emitHookResponse(trigger, hookResponse);
-                  this.incrementCredits(trigger);
+              triggers.forEach(async (trigger) => {
+                if (trigger.user.stripe) {
+                  const { subscription } = await stripe.subscriptionItems.retrieve(trigger.user.stripe!);
+                  const { default_payment_method } = await stripe.subscriptions.retrieve(subscription);
+                  const credits = await this.getUsage(trigger.user.stripe);
+                  const hookResponse: HookResponse | null = this.getHookResponse(trigger, log);
+                  if (hookResponse && (credits < 1000 || default_payment_method)) {
+                    this.emitHookResponse(trigger, hookResponse);
+                    this.incrementCredits(trigger.user.stripe);
+                  }
                 }
               });
             });
@@ -82,44 +90,34 @@ export default class Event {
     return hookResponse;
   }
 
-  async queryDatabase(_log: ethers.providers.Log): Promise<Trigger[]> {
+  async queryDatabase(_log: ethers.providers.Log): Promise<(Trigger & { user: User })[]> {
     // SELECT * FROM triggers WHERE chainId = this.chainId AND address = _log.address AND (user.credits <= 1000 OR user.paid = true)
-    return await this.prisma.trigger.findMany({
+    const data = await this.prisma.trigger.findMany({
       where: {
         chainId: this.chainId,
         address: _log.address.toLowerCase(),
-        OR: [
-          {
-            user: {
-              credits: {
-                lte: 1000,
-              },
-            },
-          },
-          {
-            user: {
-              paid: true,
-            },
-          },
-        ],
+      },
+      include: {
+        user: true,
       },
     });
+    return data;
   }
 
-  async incrementCredits(_trigger: Trigger): Promise<User> {
-    return await this.prisma.user.update({
-      where: {
-        id: _trigger.userId,
-      },
-      data: {
-        credits: {
-          increment: 1,
-        },
-      },
+  async incrementCredits(_subscriptionId: string): Promise<Stripe.Response<Stripe.UsageRecord>> {
+    const increment = await stripe.subscriptionItems.createUsageRecord(_subscriptionId, {
+      quantity: 1,
+      action: "increment",
     });
+    return increment;
   }
 
   emitHookResponse(_trigger: Trigger, _hookResponse: HookResponse): void {
     axios.post(_trigger.webhookUrl, _hookResponse);
+  }
+
+  async getUsage(_subscriptionId: string): Promise<number> {
+    const usage = await stripe.subscriptionItems.listUsageRecordSummaries(_subscriptionId);
+    return usage.data[0].total_usage;
   }
 }

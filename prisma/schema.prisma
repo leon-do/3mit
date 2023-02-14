@@ -58,9 +58,8 @@ model User {
   role          String?   @default("user")
   accounts      Account[]
   sessions      Session[]
-  apiKey        String    @unique @default(cuid())
-  credits       Int       @default(0)
-  paid          Boolean   @default(false)
+  apiKey        String    @unique @default(cuid()) // for Zapier
+  stripe        String?   @unique // stripe subscripton item id
   posts         Trigger[]
 }
 

@@ -4,6 +4,10 @@ import { PrismaClient } from "@prisma/client";
 import { Trigger } from "@prisma/client";
 import { User } from "@prisma/client";
 
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, { apiVersion: "2022-11-15" });
+
 type HookResponse = {
   transactionHash: string;
   fromAddress: string;
@@ -31,10 +35,17 @@ export default class Transaction {
       transactionHashes.forEach((transactionHash) => {
         this.getTransactionResponse(transactionHash).then((transactionResponse) => {
           this.queryDatabase(transactionResponse).then((triggers) => {
-            triggers.forEach((trigger) => {
-              const hookResponse: HookResponse = this.getHookResponse(transactionResponse);
-              this.emitHookResponse(trigger, hookResponse);
-              this.incrementCredits(trigger);
+            triggers.forEach(async (trigger) => {
+              if (trigger.user.stripe) {
+                const { subscription } = await stripe.subscriptionItems.retrieve(trigger.user.stripe);
+                const { default_payment_method } = await stripe.subscriptions.retrieve(subscription);
+                const credits = await this.getUsage(trigger.user.stripe);
+                const hookResponse: HookResponse = this.getHookResponse(transactionResponse);
+                if (hookResponse && (credits < 1000 || default_payment_method)) {
+                  this.emitHookResponse(trigger, hookResponse);
+                  this.incrementCredits(trigger.user.stripe);
+                }
+              }
             });
           });
         });
@@ -57,9 +68,9 @@ export default class Transaction {
     return transactionResponse;
   }
 
-  async queryDatabase(_transaction: ethers.providers.TransactionResponse): Promise<Trigger[]> {
+  async queryDatabase(_transaction: ethers.providers.TransactionResponse): Promise<(Trigger & { user: User })[]> {
     // SELECT * FROM triggers WHERE chainId = _transaction.chainId AND abi IS NULL AND (address = _transaction.from OR address = _transaction.to) AND (user.credits <= 1000 OR user.paid = true)
-    return await this.prisma.trigger.findMany({
+    const data = await this.prisma.trigger.findMany({
       where: {
         chainId: _transaction.chainId,
         abi: null,
@@ -74,38 +85,21 @@ export default class Transaction {
               },
             ],
           },
-          {
-            OR: [
-              {
-                user: {
-                  credits: {
-                    lte: 1000,
-                  },
-                },
-              },
-              {
-                user: {
-                  paid: true,
-                },
-              },
-            ],
-          },
         ],
       },
+      include: {
+        user: true,
+      },
     });
+    return data;
   }
 
-  async incrementCredits(_trigger: Trigger): Promise<User> {
-    return await this.prisma.user.update({
-      where: {
-        id: _trigger.userId,
-      },
-      data: {
-        credits: {
-          increment: 1,
-        },
-      },
+  async incrementCredits(_subscriptionId: string): Promise<Stripe.Response<Stripe.UsageRecord>> {
+    const increment = await stripe.subscriptionItems.createUsageRecord(_subscriptionId, {
+      quantity: 1,
+      action: "increment",
     });
+    return increment;
   }
 
   getHookResponse(_transaction: ethers.providers.TransactionResponse): HookResponse {
@@ -122,5 +116,10 @@ export default class Transaction {
 
   emitHookResponse(_trigger: Trigger, _hookResponse: HookResponse): void {
     axios.post(_trigger.webhookUrl, _hookResponse);
+  }
+
+  async getUsage(_subscriptionId: string): Promise<number> {
+    const usage = await stripe.subscriptionItems.listUsageRecordSummaries(_subscriptionId);
+    return usage.data[0].total_usage;
   }
 }
