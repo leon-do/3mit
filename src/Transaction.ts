@@ -73,7 +73,7 @@ export default class Transaction {
     const data = await this.prisma.trigger.findMany({
       where: {
         chainId: _transaction.chainId,
-        abi: null,
+        abi: "",
         AND: [
           {
             AND: [
