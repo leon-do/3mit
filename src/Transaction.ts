@@ -105,7 +105,7 @@ export default class Transaction {
   getHookResponse(_transaction: ethers.providers.TransactionResponse): HookResponse {
     return {
       fromAddress: _transaction.from,
-      toAddress: _transaction.to ? _transaction.to.toLowerCase() : "",
+      toAddress: _transaction.to ? _transaction.to : "",
       value: ethers.BigNumber.from(_transaction.value).toString(),
       transactionHash: _transaction.hash,
       chainId: _transaction.chainId,
