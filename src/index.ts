@@ -5,39 +5,42 @@ import Event from "./Event";
 
 // check if admin key is set
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL not set in .env file");
-if (!process.env.RPC_URL) throw new Error("RPC_URL not set in .env file");
 
-// create transaction & event instances
-const transaction = new Transaction(process.env.RPC_URL);
-const event = new Event(process.env.RPC_URL);
+// list of chain rpcs
+const rpcs = ["https://ethereum-goerli.publicnode.com"];
+
+for (const rpc of rpcs) {
+  startTransaction(new Transaction(rpc), 0);
+  startEvent(new Event(rpc), 0);
+}
 
 // check for new blocks and emit transactioin when new blocks are found
-startTransaction(0);
-async function startTransaction(_lastBlockNumber: number): Promise<void> {
+async function startTransaction(_transaction: Transaction, _lastBlockNumber: number): Promise<void> {
   try {
-    const blockNumber = await transaction.getBlockNumber();
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const blockNumber = await _transaction.getBlockNumber();
     if (blockNumber > _lastBlockNumber) {
-      transaction.emit(blockNumber);
-      return startTransaction(blockNumber);
+      _transaction.emit(blockNumber);
+      return startTransaction(_transaction, blockNumber);
     } else {
-      return startTransaction(_lastBlockNumber);
+      return startTransaction(_transaction, _lastBlockNumber);
     }
   } catch {
-    return startTransaction(_lastBlockNumber);
+    return startTransaction(_transaction, _lastBlockNumber);
   }
 }
 
-startEvent(0);
-async function startEvent(_lastBlockNumber: number): Promise<void> {
+async function startEvent(_event: Event, _lastBlockNumber: number): Promise<void> {
   try {
-    const blockNumber = await event.getBlockNumber();
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const blockNumber = await _event.getBlockNumber();
     if (blockNumber > _lastBlockNumber) {
-      event.emit(blockNumber);
-      return startEvent(blockNumber);
+      _event.emit(blockNumber);
+      return startEvent(_event, blockNumber);
     } else {
-      return startEvent(_lastBlockNumber);
+      return startEvent(_event, _lastBlockNumber);
     }
   } catch {
-    return startEvent(_lastBlockNumber);
+    return startEvent(_event, _lastBlockNumber);
   }
 }
