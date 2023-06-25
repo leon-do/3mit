@@ -13,9 +13,10 @@ datasource db {
 
 // https://github.com/planetscale/nextjs-planetscale-starter/blob/main/db/schema.prisma
 model Trigger {
-  webhookUrl String   @id
-  chainId    Int
-  address    String
-  abi        String?  @db.Text
-  event      String?
+  webhookUrl   String  @id
+  chainId      Int
+  address      String
+  abi          String? @db.Text
+  event        String?
+  lemonsqueezy String
 }
