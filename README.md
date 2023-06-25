@@ -6,14 +6,51 @@ Emit EVM all events
 
 `npm install`
 
-`cp .env.example .env`
+```bash
+cp .env.example .env
+```
 
 Update `.env` file
 
 ```
 DATABASE_URL="mysql://johndoe:randompassword@localhost:5432/mydb?schema=public"
 RPC_URL=https://infura.io/v3/your_project_id
-TIMEOUT=500
 ```
 
-`npm run dev`
+```bash
+npm run dev
+```
+
+## Database
+
+Create Table
+
+```bash
+npx prisma db push
+```
+
+Insert mock transaction
+
+```sql
+INSERT INTO Trigger (webhookUrl, chainId, address) VALUES ('https://express-demo.leondo.repl.co?foo', 5, '0xdd4c825203f97984e7867f11eecc813a036089d1');
+```
+
+Insert mock event
+
+https://goerli.etherscan.io/address/0xeb3c1910d1556bf7eabcc1725ef24af28106c5b2#writeContract
+
+```sql
+INSERT INTO Trigger (
+  webhookUrl,
+  chainId,
+  address,
+  event,
+  abi
+) VALUES (
+    'https://express-demo.leondo.repl.co?bar',
+    5,
+    '0xeb3c1910d1556bf7eabcc1725ef24af28106c5b2',
+    'Event1(address)',
+    '[ { "inputs": [], "name": "emit1", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "emit2", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "emit3", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "emit4", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "anonymous": false, "inputs": [ { "indexed": false, "internalType": "address", "name": "_addressA", "type": "address" } ], "name": "Event1", "type": "event" }, { "anonymous": false, "inputs": [ { "indexed": true, "internalType": "address", "name": "_addressB", "type": "address" } ], "name": "Event2", "type": "event" }, { "anonymous": false, "inputs": [ { "indexed": false, "internalType": "address", "name": "_addressA", "type": "address" }, { "indexed": true, "internalType": "address", "name": "_addressB", "type": "address" } ], "name": "Event3", "type": "event" } ]'
+);
+```

@@ -2,11 +2,6 @@ import axios from "axios";
 import { ethers } from "ethers";
 import { PrismaClient } from "@prisma/client";
 import { Trigger } from "@prisma/client";
-import { User } from "@prisma/client";
-
-import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, { apiVersion: "2022-11-15" });
 
 type HookResponse = {
   transactionHash: string;
@@ -29,23 +24,15 @@ export default class Transaction {
     this.blockNumber = 0;
   }
 
-  // keep the fire growing deep inside... hell awaits
+  // TMNT all the way down
   async emit(_blockNumber: number) {
     this.getTransactionHashes(_blockNumber).then((transactionHashes) => {
       transactionHashes.forEach((transactionHash) => {
         this.getTransactionResponse(transactionHash).then((transactionResponse) => {
           this.queryDatabase(transactionResponse).then((triggers) => {
-            triggers.forEach(async (trigger) => {
-              if (trigger.user.stripe) {
-                const { subscription } = await stripe.subscriptionItems.retrieve(trigger.user.stripe);
-                const { default_payment_method } = await stripe.subscriptions.retrieve(subscription);
-                const credits = await this.getUsage(trigger.user.stripe);
-                const hookResponse: HookResponse = this.getHookResponse(transactionResponse);
-                if (hookResponse && (credits < 1000 || default_payment_method)) {
-                  this.emitHookResponse(trigger, hookResponse);
-                  this.incrementCredits(trigger.user.stripe);
-                }
-              }
+            const hookResponse: HookResponse = this.getHookResponse(transactionResponse);
+            triggers.forEach((trigger) => {
+              this.emitHookResponse(trigger, hookResponse);
             });
           });
         });
@@ -68,38 +55,29 @@ export default class Transaction {
     return transactionResponse;
   }
 
-  async queryDatabase(_transaction: ethers.providers.TransactionResponse): Promise<(Trigger & { user: User })[]> {
-    // SELECT * FROM triggers WHERE chainId = _transaction.chainId AND abi IS NULL AND (address = _transaction.from OR address = _transaction.to) AND (user.credits <= 1000 OR user.paid = true)
-    const data = await this.prisma.trigger.findMany({
-      where: {
-        chainId: _transaction.chainId,
-        abi: "",
-        AND: [
-          {
-            AND: [
-              {
-                address: _transaction.from.toLowerCase(),
-              },
-              {
-                address: _transaction.to ? _transaction.to.toLowerCase() : "",
-              },
-            ],
-          },
-        ],
-      },
-      include: {
-        user: true,
-      },
-    });
-    return data;
-  }
-
-  async incrementCredits(_subscriptionId: string): Promise<Stripe.Response<Stripe.UsageRecord>> {
-    const increment = await stripe.subscriptionItems.createUsageRecord(_subscriptionId, {
-      quantity: 1,
-      action: "increment",
-    });
-    return increment;
+  async queryDatabase(_transaction: ethers.providers.TransactionResponse): Promise<Trigger[]> {
+    try {
+      return await this.prisma.trigger.findMany({
+        where: {
+          chainId: _transaction.chainId,
+          abi: null,
+          AND: [
+            {
+              OR: [
+                {
+                  address: _transaction.from.toLowerCase(),
+                },
+                {
+                  address: _transaction.to ? _transaction.to.toLowerCase() : "",
+                },
+              ],
+            },
+          ],
+        },
+      });
+    } catch {
+      return [];
+    }
   }
 
   getHookResponse(_transaction: ethers.providers.TransactionResponse): HookResponse {
@@ -116,10 +94,5 @@ export default class Transaction {
 
   emitHookResponse(_trigger: Trigger, _hookResponse: HookResponse): void {
     axios.post(_trigger.webhookUrl, _hookResponse);
-  }
-
-  async getUsage(_subscriptionId: string): Promise<number> {
-    const usage = await stripe.subscriptionItems.listUsageRecordSummaries(_subscriptionId);
-    return usage.data[0].total_usage;
   }
 }

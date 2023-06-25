@@ -2,10 +2,6 @@ import axios from "axios";
 import { ethers } from "ethers";
 import { PrismaClient } from "@prisma/client";
 import { Trigger } from "@prisma/client";
-import { User } from "@prisma/client";
-import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, { apiVersion: "2022-11-15" });
 
 type HookResponse = {
   transactionHash: string;
@@ -26,7 +22,7 @@ export default class Event {
     this.getChainId();
   }
 
-  // you're never alone, walk with me in hell
+  // follow me to the depths of hell
   async emit(_blockNumber: number) {
     this.getTransactionHashes(_blockNumber).then((transactionHashes) => {
       transactionHashes.forEach((transactionHash) => {
@@ -34,16 +30,8 @@ export default class Event {
           logs.forEach((log) => {
             this.queryDatabase(log).then((triggers) => {
               triggers.forEach(async (trigger) => {
-                if (trigger.user.stripe) {
-                  const { subscription } = await stripe.subscriptionItems.retrieve(trigger.user.stripe!);
-                  const { default_payment_method } = await stripe.subscriptions.retrieve(subscription);
-                  const credits = await this.getUsage(trigger.user.stripe);
-                  const hookResponse: HookResponse | null = this.getHookResponse(trigger, log);
-                  if (hookResponse && (credits < 1000 || default_payment_method)) {
-                    this.emitHookResponse(trigger, hookResponse);
-                    this.incrementCredits(trigger.user.stripe);
-                  }
-                }
+                const response = this.getHookResponse(trigger, log);
+                this.emitHookResponse(trigger, response);
               });
             });
           });
@@ -81,6 +69,8 @@ export default class Event {
       hookResponse[`${eventName}_${input.name}`] = null;
     });
     const eventSignature = iface.parseLog({ data: _log.data, topics: _log.topics });
+    // only return hookResponse if eventSignature matches trigger
+    if (eventSignature.signature !== _trigger.event) return null;
     // fill event object with values from eventSignature
     for (const key in eventSignature.args) {
       if (!isNaN(Number(key))) continue;
@@ -90,34 +80,21 @@ export default class Event {
     return hookResponse;
   }
 
-  async queryDatabase(_log: ethers.providers.Log): Promise<(Trigger & { user: User })[]> {
-    // SELECT * FROM triggers WHERE chainId = this.chainId AND address = _log.address AND (user.credits <= 1000 OR user.paid = true)
-    const data = await this.prisma.trigger.findMany({
-      where: {
-        chainId: this.chainId,
-        address: _log.address.toLowerCase(),
-      },
-      include: {
-        user: true,
-      },
-    });
-    return data;
+  async queryDatabase(_log: ethers.providers.Log): Promise<Trigger[]> {
+    try {
+      return this.prisma.trigger.findMany({
+        where: {
+          chainId: this.chainId,
+          address: _log.address.toLowerCase(),
+        },
+      });
+    } catch {
+      return [];
+    }
   }
 
-  async incrementCredits(_subscriptionId: string): Promise<Stripe.Response<Stripe.UsageRecord>> {
-    const increment = await stripe.subscriptionItems.createUsageRecord(_subscriptionId, {
-      quantity: 1,
-      action: "increment",
-    });
-    return increment;
-  }
-
-  emitHookResponse(_trigger: Trigger, _hookResponse: HookResponse): void {
+  emitHookResponse(_trigger: Trigger, _hookResponse: HookResponse | null): void {
+    if (!_hookResponse) return;
     axios.post(_trigger.webhookUrl, _hookResponse);
-  }
-
-  async getUsage(_subscriptionId: string): Promise<number> {
-    const usage = await stripe.subscriptionItems.listUsageRecordSummaries(_subscriptionId);
-    return usage.data[0].total_usage;
   }
 }

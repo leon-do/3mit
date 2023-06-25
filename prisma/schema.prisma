@@ -12,74 +12,10 @@ datasource db {
 }
 
 // https://github.com/planetscale/nextjs-planetscale-starter/blob/main/db/schema.prisma
-model Account {
-  id                       String   @id @default(cuid())
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
-  userId                   String
-  type                     String
-  provider                 String
-  providerAccountId        String
-  refresh_token            String?  @db.VarChar(500)
-  access_token             String?  @db.VarChar(500)
-  refresh_token_expires_in Int?
-  expires_at               Int?
-  token_type               String?
-  scope                    String?
-  id_token                 String?  @db.Text
-  session_state            String?
-  oauth_token_secret       String?
-  oauth_token              String?
-  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@index([userId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  expires      DateTime
-  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId       String?
-
-  @@index([userId])
-}
-
-model User {
-  id            String    @id @default(cuid())
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  name          String?
-  email         String?   @unique
-  password      String?
-  emailVerified DateTime?
-  image         String?
-  role          String?   @default("user")
-  accounts      Account[]
-  sessions      Session[]
-  apiKey        String    @unique @default(cuid()) // for Zapier
-  stripe        String?   @unique // stripe subscripton item id
-  posts         Trigger[]
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
 model Trigger {
-  webhookUrl String  @id @unique
-  address    String
-  abi        String? @db.Text
-  event      String?
-  userId     String
+  webhookUrl String   @id
   chainId    Int
-  user       User    @relation(fields: [userId], references: [id])
-  streamId   String? @unique // from Moralis
-
-  @@index([userId])
+  address    String
+  abi        String?  @db.Text
+  event      String?
 }
