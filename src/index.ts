@@ -9,11 +9,9 @@ if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL not set in .env fil
 // prettier-ignore
 const rpcs = [
   "https://ethereum.publicnode.com",          // eth
-  "https://ethereum-goerli.publicnode.com",   // eth testnet 
+  "https://ethereum-goerli.publicnode.com",   // goerli 
   "https://polygon-bor.publicnode.com",       // polygon
-  "https://polygon-mumbai-bor.publicnode.com",// polygon testnet
   "https://mainnet.era.zksync.io",            // zksync
-  "https://testnet.era.zksync.dev",           // zksync testnet
 ];
 
 for (const rpc of rpcs) {
